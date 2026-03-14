@@ -26,6 +26,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Something went wrong!" });
 });
 
+app.get("/", (req, res) => {
+  res.send("Server is running!"); // simple test
+});
+
 // 5. Server Start
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
