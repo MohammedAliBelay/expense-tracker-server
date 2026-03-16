@@ -9,6 +9,7 @@ router.get("/", auth, expenseController.getAllExpenses);
 router.post("/", auth, upload.single("receipt"), expenseController.addExpense);
 router.put("/:id", auth, expenseController.updateExpense);
 router.delete("/:id", auth, expenseController.deleteExpense);
+router.put("/approve/:id", auth, expenseController.approveExpense);
 router.get("/export/excel", auth, expenseController.exportExcel);
 
 module.exports = router;
