@@ -19,6 +19,8 @@ app.use("/uploads", express.static("uploads"));
 app.use("/auth", authRoutes);
 app.use("/expenses", expenseRoutes);
 app.use("/users", userRoutes);
+app.use("/reset-password", authRoutes); // For password reset links
+app.use("/forgot-password", authRoutes); // For forgot password requests
 
 // 4. Basic Error Handling
 app.use((err, req, res, next) => {
