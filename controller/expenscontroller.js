@@ -165,52 +165,161 @@ exports.deleteExpense = async (req, res) => {
 };
 
 /* Approve/Reject expense (owners only) */
+// exports.approveExpense = async (req, res) => {
+//   try {
+//     // Only owners can approve/reject
+//     if (req.user.role !== "owner")
+//       return res.status(403).json({ message: "Owners only" });
+
+//     const { status } = req.body;
+//     const allowed = ["Pending", "Approved", "Rejected"];
+//     if (!allowed.includes(status)) {
+//       return res.status(400).json({ message: "Invalid status value" });
+//     }
+
+//     // Update the expense
+//     const [result] = await db.query(
+//       "UPDATE expenses SET status = ? WHERE id = ?",
+//       [status, req.params.id],
+//     );
+
+//     if (result.affectedRows === 0) {
+//       return res.status(404).json({ message: "Not found" });
+//     }
+
+//     // If rejected, fetch user email and send notification
+//     if (status === "Rejected") {
+//       const [expenseData] = await db.query(
+//         "SELECT e.amount, u.email, u.name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.id = ?",
+//         [req.params.id],
+//       );
+
+//       if (expenseData.length) {
+//         const expense = expenseData[0];
+//         await sendEmail({
+//           to: expense.email,
+//           subject: "Expense Request Rejected",
+//           html: `
+//             <p>Hi ${expense.name},</p>
+//             <p>Your expense request "<strong>${expense.amount}</strong>" has been <strong>rejected</strong>.</p>
+//             <p>If you have any questions, please contact the management.</p>
+//             <p>Thank you.</p>
+//           `,
+//         });
+//       }
+//     }
+//     res.json({ message: "Updated" });
+//   } catch (err) {
+//     console.error("approveExpense error:", err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// exports.approveExpense = async (req, res) => {
+//   try {
+//     if (req.user.role !== "owner")
+//       return res.status(403).json({ message: "Owners only" });
+
+//     // Determine status from route
+//     let status = "";
+//     if (req.path.includes("/approve/")) status = "Approved";
+//     else if (req.path.includes("/reject/")) status = "Rejected";
+//     else return res.status(400).json({ message: "Invalid action" });
+
+//     // Update the expense
+//     const [result] = await db.query(
+//       "UPDATE expenses SET status = ? WHERE id = ?",
+//       [status, req.params.id],
+//     );
+
+//     if (result.affectedRows === 0)
+//       return res.status(404).json({ message: "Not found" });
+
+//     // Send email if rejected
+//     if (status === "Rejected") {
+//       const [expenseData] = await db.query(
+//         "SELECT e.amount, u.email, u.name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.id = ?",
+//         [req.params.id],
+//       );
+
+//       if (expenseData.length) {
+//         const expense = expenseData[0];
+//         await sendEmail({
+//           to: expense.email,
+//           subject: "Expense Request Rejected",
+//           html: `
+//             <p>Hi ${expense.name},</p>
+//             <p>Your expense request "<strong>${expense.amount}</strong>" has been <strong>rejected</strong>.</p>
+//             <p>If you have any questions, please contact the management.</p>
+//           `,
+//         });
+//       }
+//     }
+
+//     res.json({ message: "Updated" });
+//   } catch (err) {
+//     console.error("approveExpense error:", err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
 exports.approveExpense = async (req, res) => {
   try {
-    // Only owners can approve/reject
     if (req.user.role !== "owner")
       return res.status(403).json({ message: "Owners only" });
 
-    const { status } = req.body;
-    const allowed = ["Pending", "Approved", "Rejected"];
-    if (!allowed.includes(status)) {
-      return res.status(400).json({ message: "Invalid status value" });
-    }
-
-    // Update the expense
     const [result] = await db.query(
-      "UPDATE expenses SET status = ? WHERE id = ?",
-      [status, req.params.id],
+      "UPDATE expenses SET status = 'Approved' WHERE id = ?",
+      [req.params.id],
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Not found" });
-    }
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Expense not found" });
 
-    // If rejected, fetch user email and send notification
-    if (status === "Rejected") {
-      const [expenseData] = await db.query(
-        "SELECT e.amount, u.email, u.name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.id = ?",
-        [req.params.id],
-      );
-
-      if (expenseData.length) {
-        const expense = expenseData[0];
-        await sendEmail({
-          to: expense.email,
-          subject: "Expense Request Rejected",
-          html: `
-            <p>Hi ${expense.name},</p>
-            <p>Your expense request "<strong>${expense.amount}</strong>" has been <strong>rejected</strong>.</p>
-            <p>If you have any questions, please contact the management.</p>
-            <p>Thank you.</p>
-          `,
-        });
-      }
-    }
-    res.json({ message: "Updated" });
+    res.json({ message: "Expense approved successfully" });
   } catch (err) {
     console.error("approveExpense error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.rejectExpense = async (req, res) => {
+  try {
+    if (req.user.role !== "owner")
+      return res.status(403).json({ message: "Owners only" });
+
+    // Update status to Rejected
+    const [result] = await db.query(
+      "UPDATE expenses SET status = 'Rejected' WHERE id = ?",
+      [req.params.id],
+    );
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Expense not found" });
+
+    // Fetch user details for notification
+    const [expenseData] = await db.query(
+      "SELECT e.amount, u.email, u.name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.id = ?",
+      [req.params.id],
+    );
+
+    if (expenseData.length > 0) {
+      const expense = expenseData[0];
+      await sendEmail({
+        to: expense.email,
+        subject: "Expense Request Rejected",
+        html: `
+          <p>Hi ${expense.name},</p>
+          <p>Your expense request "<strong>${expense.amount}</strong>" has been <strong>rejected</strong>.</p>
+          <p>If you have any questions, please contact the management.</p>
+        `,
+      });
+    }
+
+    res.json({ message: "Expense rejected and notification sent" });
+  } catch (err) {
+    console.error("rejectExpense error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
