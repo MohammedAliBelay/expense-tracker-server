@@ -208,7 +208,6 @@ exports.approveExpense = async (req, res) => {
         });
       }
     }
-
     res.json({ message: "Updated" });
   } catch (err) {
     console.error("approveExpense error:", err);
