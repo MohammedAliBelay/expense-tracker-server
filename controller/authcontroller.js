@@ -95,7 +95,7 @@ exports.forgotPassword = async (req, res) => {
     [hashedToken, new Date(expires), email],
   );
 
-  const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
+  const resetURL = `https://fets1.onrender.com/reset-password/${resetToken}`;
 
   await sendEmail({
     to: email,

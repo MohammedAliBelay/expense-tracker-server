@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const ExcelJS = require("exceljs");
+const sendEmail = require("../utils/sendemail");
 /* GET all expenses */
 exports.getAllExpenses = async (req, res) => {
   try {
@@ -166,6 +167,7 @@ exports.deleteExpense = async (req, res) => {
 /* Approve/Reject expense (owners only) */
 exports.approveExpense = async (req, res) => {
   try {
+    // Only owners can approve/reject
     if (req.user.role !== "owner")
       return res.status(403).json({ message: "Owners only" });
 
@@ -175,14 +177,39 @@ exports.approveExpense = async (req, res) => {
       return res.status(400).json({ message: "Invalid status value" });
     }
 
+    // Update the expense
     const [result] = await db.query(
       "UPDATE expenses SET status = ? WHERE id = ?",
       [status, req.params.id],
     );
 
-    result.affectedRows === 0
-      ? res.status(404).json({ message: "Not found" })
-      : res.json({ message: "Updated" });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    // If rejected, fetch user email and send notification
+    if (status === "Rejected") {
+      const [expenseData] = await db.query(
+        "SELECT e.amount, u.email, u.name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.id = ?",
+        [req.params.id],
+      );
+
+      if (expenseData.length) {
+        const expense = expenseData[0];
+        await sendEmail({
+          to: expense.email,
+          subject: "Expense Request Rejected",
+          html: `
+            <p>Hi ${expense.name},</p>
+            <p>Your expense request "<strong>${expense.amount}</strong>" has been <strong>rejected</strong>.</p>
+            <p>If you have any questions, please contact the management.</p>
+            <p>Thank you.</p>
+          `,
+        });
+      }
+    }
+
+    res.json({ message: "Updated" });
   } catch (err) {
     console.error("approveExpense error:", err);
     res.status(500).json({ message: "Server error" });
